@@ -106,6 +106,14 @@ select variety, country, province, winery, price, round(media_preco,2), round(de
 from winetable w cross join stats s
 where w.price > s.media_preco + 2*s.desvio_preco
 or w.price < s.media_preco - 2*s.desvio_preco
+
+--query ajustada, uma vez que rodando a query acima detectamos que o limite inferior resultou em valor negativo--
+with stats as (
+select avg(price) as media_preco, stddev (price) as desvio_preco from winetable
+)
+select variety, country, province, winery, price, round(media_preco + 2*s.desvio_preco,2) as limite_superior,
+from winetable w cross join stats s
+where w.price > s.media_preco + 2*s.desvio_preco 
 ```
 
 ## Bloco 3: Modelagem Temporal e Crescimento de Negócio:
