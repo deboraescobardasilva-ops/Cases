@@ -4,8 +4,7 @@
 Análise exploratória e estratégica de uma base de dados de vendas de vinhos extraída do Kaggle, focada em identificar padrões de consumo, performance de produtos e oportunidades de otimização de receita.
 
 ## 2. Engenharia de Dados & Estrutura do Banco:
-Para este projeto, os dados brutos foram tratados e modelados em um banco de dados PostgreSQL. Foi criada uma tabela transacional de vendas para otimizar as consultas e ampliar a análise.
-
+Para este projeto, os dados brutos foram tratados e modelados em um banco de dados PostgreSQL. Foi criada uma tabela transacional de vendas para otimizar as consultas e ampliar a análise. 
 ````sql
 -- Estrutura de criação de tabela de vendas:
 CREATE TABLE vendas3 (
@@ -22,7 +21,8 @@ CURRENT_DATE - (random()*365)::int,
 ROUND((random()*300+10)::numeric, 2)
 FROM generate_series (1,200000);
 
--- Tratamento da tabela de vinhos extraída do Kaggle:
+-- A tabela winetable foi obtida através do seguinte link: https://www.kaggle.com/datasets/zynicide/wine-reviews
+Foi efetuado o download da tabela winemag-data-130k-v2.csv, a qual foi importada para o PostgreSQL através do pqsl:
 
 CREATE TABLE winetable
 (id_table SERIAL PRIMARY KEY,
