@@ -50,6 +50,7 @@ Abaixo estão 8 análises estratégicas desenvolvidas para responder às dores d
 ## Bloco 1: Performance de Produto e Mix de Vendas (Sortimento)
 
 ## Análise 3.1: Classificação da curva ABC por faturamento:
+**-Objetivo:** Aplicar o princípio de Pareto para identificar quais vinhos concentram 80% do faturamento total. Essa informação é vital para blindar os principais geradores de receita e otimizar a cadeia de suprimentos.
 ```sql
 --with faturamento as (
 select w.id_table, w.winery,sum(v.quantidade*w.price) as receita
@@ -62,6 +63,7 @@ from ranking
 order by receita desc
 ```
 ## Análise 3.2: Identificação de Variedades mais Lucrativas:
+**-Objetivo:** Avaliar os 10 tipos de uvas (variedades) que trazem o maior retorno financeiro, cruzando o faturamento total com o volume absoluto de vendas. Essa visão permite focar o orçamento de marketing nas variedades que movem o ponteiro da receita, potencializa a gestão de parcerias estratégicas e evita o estoque de baixo giro. 
 ```sql
 select w.variety, sum(v.quantidade * w.price) as faturamento, sum(v.quantidade) as volume
 from vendas3 v join winetable w on v.id_vinho = w.id_table
@@ -71,6 +73,8 @@ limit 10
 ```
 
 ## Análise 3.3: Vinhos nunca vendidos (Análise de Churn de Estoque)
+
+**-Objetivo:** Identificar quais produtos nunca tiveram saída, o que permite que o time comercial monte kits, atue em promoções ou mude a estratégia de distribuição geográfica desses rótulos.
 ```sql
 select w.id_table, w.winery, w.variety, w.price
 from winetable w left join vendas3 v on v.id_vinho = w.id_table
@@ -79,6 +83,7 @@ where v.id_vinho is null
 ## Bloco 2: Elasticidade de Preço e Inteligência Geográfica:
 
 ## Análise 3.4: Análise de Preços vs Volume de Vendas:
+**-Objetivo:** A segmentação de portifólio ajuda a entender a elasticidade dos preços. Isso responde a uma pergunta crucial de mercado: o faturamento é sustentado pelo volume de produtos de entrada ou pela margem de produtos de alto padrão?
 ```sql
 select case when w.price < 50 then 'Barato'
             when w.price between 50 and 100 then 'Médio'
@@ -98,6 +103,8 @@ group by w.country
 order by ticket_medio desc
 ```
 ## Análise 3.6: Detecção de Outliers de Preço por Categoria:
+
+**- Objetivo:** Identificar produtos com preços muito acima ou abaixo da média de mercado, utilizando o modelo estatístico de **Média +- 2 Devios Padrão** para isolar distorções e encontrar itens de categorias Premium.
 ```sql
 with stats as (
 select avg(price) as media_preco, stddev (price) as desvio_preco from winetable
@@ -115,6 +122,12 @@ select variety, country, province, winery, price, round(media_preco + 2*s.desvio
 from winetable w cross join stats s
 where w.price > s.media_preco + 2*s.desvio_preco 
 ```
+## Interpretação dos resultados estatísticos: 
+-Ao executar a query, o modelo calculou a média geral de preços em **$39,84** e um desvio padrão de **$42.84**.
+- O Limite Superior resultou em **$125.52**, o que indica que qualquer vinho acima desse valor é um outlier de preço alto.
+- O Limite Inferior resultou em um valor negativo **(- $45.85)**. Esse fenômeno ocorre devido à alta dispersão de preços no dataset.
+- No mercado real, não existem preços negativos, portanto a análise conclui que não há outliers inferiores nesse portifólio e valida que não há distorções causadas por produtos baratos demais.
+- Por outro lado,  o teto de **125.52** isola com precisão os vinhos Premium ou de Colecionador, o que permite a criação de uma categoria de produtos exclusivos separada do portifólio regular.
 
 ## Bloco 3: Modelagem Temporal e Crescimento de Negócio:
 
