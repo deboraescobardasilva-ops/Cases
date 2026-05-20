@@ -1,9 +1,9 @@
-# Análise de Dados e Performance de Vendas - Case Vinhos (Kaggle)
+# 📊Análise de Dados e Performance de Vendas - Case Vinhos (Kaggle)
 
-## 1. Contexto do Negócio:
+## 1. Contexto do Negócio:🎯
 Análise exploratória e estratégica de uma base de dados de vendas de vinhos extraída do Kaggle, focada em identificar padrões de consumo, performance de produtos e oportunidades de otimização de receita.
 
-## 2. Engenharia de Dados & Estrutura do Banco:
+## 🛠️2. Engenharia de Dados & Estrutura do Banco:
 Para este projeto, os dados brutos foram tratados e modelados em um banco de dados PostgreSQL. Foi criada uma tabela transacional de vendas para otimizar as consultas e ampliar a análise. 
 ````sql
 -- Estrutura de criação de tabela de vendas:
@@ -47,7 +47,7 @@ with (Format csv, HEADER true, Encoding 'UTF8')
 
 Abaixo estão 8 análises estratégicas desenvolvidas para responder às dores do negócio, divididas por blocos de inteligência comercial.
 
-## Bloco 1: Performance de Produto e Mix de Vendas (Sortimento)
+## 📊Bloco 1: Performance de Produto e Mix de Vendas (Sortimento)
 
 ## Análise 3.1: Classificação da curva ABC por faturamento:
 **-Objetivo:** Aplicar o princípio de Pareto para identificar quais vinhos concentram 80% do faturamento total. Essa informação é vital para blindar os principais geradores de receita e otimizar a cadeia de suprimentos.
@@ -80,7 +80,7 @@ select w.id_table, w.winery, w.variety, w.price
 from winetable w left join vendas3 v on v.id_vinho = w.id_table
 where v.id_vinho is null
 ```
-## Bloco 2: Elasticidade de Preço e Inteligência Geográfica:
+## 📊Bloco 2: Elasticidade de Preço e Inteligência Geográfica:
 
 ## Análise 3.4: Análise de Preços vs Volume de Vendas:
 **-Objetivo:** A segmentação de portifólio ajuda a entender a elasticidade dos preços. Isso responde a uma pergunta crucial de mercado: o faturamento é sustentado pelo volume de produtos de entrada ou pela margem de produtos de alto padrão?
@@ -122,14 +122,14 @@ select variety, country, province, winery, price, round(media_preco + 2*s.desvio
 from winetable w cross join stats s
 where w.price > s.media_preco + 2*s.desvio_preco 
 ```
-## Interpretação dos resultados estatísticos: 
+## 💡Interpretação dos resultados estatísticos: 
 -Ao executar a query, o modelo calculou a média geral de preços em **$39,84** e um desvio padrão de **$42.84**.
 - O Limite Superior resultou em **$125.52**, o que indica que qualquer vinho acima desse valor é um outlier de preço alto.
 - O Limite Inferior resultou em um valor negativo **(- $45.85)**. Esse fenômeno ocorre devido à alta dispersão de preços no dataset.
 - No mercado real, não existem preços negativos, portanto a análise conclui que não há outliers inferiores nesse portifólio e valida que não há distorções causadas por produtos baratos demais.
 - Por outro lado,  o teto de **125.52** isola com precisão os vinhos Premium ou de Colecionador, o que permite a criação de uma categoria de produtos exclusivos separada do portifólio regular.
 
-## Bloco 3: Modelagem Temporal e Crescimento de Negócio:
+## 📊Bloco 3: Modelagem Temporal e Crescimento de Negócio:
 
 ## Análise 3.7: Avaliação de Sazonalidade Mensal com função de Lag:
 ```sql
