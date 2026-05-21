@@ -149,14 +149,17 @@ where w.price > s.media_preco + 2*s.desvio_preco
 **🎯Objetivo:**
 ```sql
 with faturamento_mensal as
-(select to_char(date_trunc('month', v.data_venda),'mm-yyyy') as mes, sum(v.quantidade * w.price) as faturamento
+date_trunc('month', v.data_venda) as mes_venda,
+sum(v.quantidade * w.price) as faturamento
 from vendas3 v join winetable w
 on v.id_vinho = w.id_table group by mes)
-select mes, faturamento, lag(faturamento) over (order by mes) as mes_anterior,
-faturamento - lag(faturamento) over (order by mes) as variacao,
-round((faturamento - lag(faturamento) over (order by mes))/lag(faturamento) over (order by mes),2) as var_prc
+select to_char(mes_venda, 'mm-yyyy') as mes,
+faturamento,
+lag(faturamento) over (order by mes) as mes_anterior,
+faturamento - lag(faturamento) over (order by mes_data) as variacao,
+round((faturamento - lag(faturamento) over (order by mes))/ nullif (lag(faturamento) over (order by mes_data), 0)*100, 2) as var_percentual
 from faturamento_mensal
-order by mes
+order by mes_venda
 ```
 **💻Resultado esperado do Output (Recorte):**
 **💡Insight:** 
