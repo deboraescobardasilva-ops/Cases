@@ -155,9 +155,9 @@ from vendas3 v join winetable w
 on v.id_vinho = w.id_table group by mes)
 select to_char(mes_venda, 'mm-yyyy') as mes,
 faturamento,
-lag(faturamento) over (order by mes) as mes_anterior,
+lag(faturamento) over (order by mes_venda) as mes_anterior,
 faturamento - lag(faturamento) over (order by mes_data) as variacao,
-round((faturamento - lag(faturamento) over (order by mes))/ nullif (lag(faturamento) over (order by mes_data), 0)*100, 2) as var_percentual
+round((faturamento - lag(faturamento) over (order by mes_venda))/ nullif (lag(faturamento) over (order by mes_venda), 0)*100, 2) as var_percentual
 from faturamento_mensal
 order by mes_venda
 ```
