@@ -141,7 +141,7 @@ where w.price > s.media_preco + 2*s.desvio_preco
 - O Limite Superior resultou em **$125.52**, o que indica que qualquer vinho acima desse valor é um outlier de preço alto.
 - O Limite Inferior resultou em um valor negativo **(- $45.85)**. Esse fenômeno ocorre devido à alta dispersão de preços no dataset.
 - No mercado real, não existem preços negativos, portanto a análise conclui que não há outliers inferiores nesse portifólio e valida que não há distorções causadas por produtos baratos demais.
-- Por outro lado,  o teto de **125.52** isola com precisão os vinhos Premium ou de Colecionador, o que permite a criação de uma categoria de produtos exclusivos separada do portifólio regular.
+- Por outro lado,  o teto de **$125.52** isola com precisão os vinhos Premium ou de Colecionador, o que permite a criação de uma categoria de produtos exclusivos separada do portifólio regular.
 
 ## 📊Bloco 3: Modelagem Temporal e Crescimento de Negócio:
 
