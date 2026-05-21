@@ -50,7 +50,7 @@ Abaixo estão 8 análises estratégicas desenvolvidas para responder às dores d
 ## 📊Bloco 1: Performance de Produto e Mix de Vendas (Sortimento)
 
 ## Análise 3.1: Classificação da curva ABC por faturamento:
-**-Objetivo:** Aplicar o princípio de Pareto para identificar quais vinhos concentram 80% do faturamento total. Essa informação é vital para blindar os principais geradores de receita e otimizar a cadeia de suprimentos.
+**🎯Objetivo:** Aplicar o princípio de Pareto para identificar quais vinhos concentram 80% do faturamento total. Essa informação é vital para blindar os principais geradores de receita e otimizar a cadeia de suprimentos.
 ```sql
 --with faturamento as (
 select w.id_table, w.winery,sum(v.quantidade*w.price) as receita
@@ -62,8 +62,11 @@ round(receita_acumulada/receita_total*100,2) as percentual_acumulado
 from ranking
 order by receita desc
 ```
+**💻Resultado esperado do Output (Recorte):**
+**💡Insight:** 
+
 ## Análise 3.2: Identificação de Variedades mais Lucrativas:
-**-Objetivo:** Avaliar os 10 tipos de uvas (variedades) que trazem o maior retorno financeiro, cruzando o faturamento total com o volume absoluto de vendas. Essa visão permite focar o orçamento de marketing nas variedades que movem o ponteiro da receita, potencializa a gestão de parcerias estratégicas e evita o estoque de baixo giro. 
+**🎯Objetivo:** Avaliar os 10 tipos de uvas (variedades) que trazem o maior retorno financeiro, cruzando o faturamento total com o volume absoluto de vendas. Essa visão permite focar o orçamento de marketing nas variedades que movem o ponteiro da receita, potencializa a gestão de parcerias estratégicas e evita o estoque de baixo giro. 
 ```sql
 select w.variety, sum(v.quantidade * w.price) as faturamento, sum(v.quantidade) as volume
 from vendas3 v join winetable w on v.id_vinho = w.id_table
@@ -71,19 +74,23 @@ group by w.variety
 order by faturamento desc
 limit 10
 ```
+**💻Resultado esperado do Output (Recorte):**
+**💡Insight:** 
 
 ## Análise 3.3: Vinhos nunca vendidos (Análise de Churn de Estoque)
-
-**-Objetivo:** Identificar quais produtos nunca tiveram saída, o que permite que o time comercial monte kits, atue em promoções ou mude a estratégia de distribuição geográfica desses rótulos.
+**🎯Objetivo:** Identificar quais produtos nunca tiveram saída, o que permite que o time comercial monte kits, atue em promoções ou mude a estratégia de distribuição geográfica desses rótulos.
 ```sql
 select w.id_table, w.winery, w.variety, w.price
 from winetable w left join vendas3 v on v.id_vinho = w.id_table
 where v.id_vinho is null
 ```
+**💻Resultado esperado do Output (Recorte):**
+**💡Insight:** 
+
 ## 📊Bloco 2: Elasticidade de Preço e Inteligência Geográfica:
 
 ## Análise 3.4: Análise de Preços vs Volume de Vendas:
-**-Objetivo:** A segmentação de portifólio ajuda a entender a elasticidade dos preços. Isso responde a uma pergunta crucial de mercado: o faturamento é sustentado pelo volume de produtos de entrada ou pela margem de produtos de alto padrão?
+**🎯Objetivo:** A segmentação de portifólio ajuda a entender a elasticidade dos preços. Isso responde a uma pergunta crucial de mercado: o faturamento é sustentado pelo volume de produtos de entrada ou pela margem de produtos de alto padrão?
 ```sql
 select case when w.price < 50 then 'Barato'
             when w.price between 50 and 100 then 'Médio'
@@ -95,16 +102,22 @@ from vendas3 v join winetable w on v.id_vinho = w.id_table
 group by faixa_preco
 order by ticket_medio
 ```
+**💻Resultado esperado do Output (Recorte):**
+**💡Insight:** 
+
 ## Análise 3.5: Ticket_Médio (TM) e Faturamento por País de Origem:
+**🎯Objetivo:**
 ```sql
 select w.country, round(avg(price),2) as ticket_medio
 from vendas3 v join winetable w on v.id_vinho = w.id_table
 group by w.country
 order by ticket_medio desc
 ```
-## Análise 3.6: Detecção de Outliers de Preço por Categoria:
+**💻Resultado esperado do Output (Recorte):**
+**💡Insight:** 
 
-**- Objetivo:** Identificar produtos com preços muito acima ou abaixo da média de mercado, utilizando o modelo estatístico de **Média +- 2 Devios Padrão** para isolar distorções e encontrar itens de categorias Premium.
+## Análise 3.6: Detecção de Outliers de Preço por Categoria:
+**🎯Objetivo:** Identificar produtos com preços muito acima ou abaixo da média de mercado, utilizando o modelo estatístico de **Média +- 2 Devios Padrão** para isolar distorções e encontrar itens de categorias Premium.
 ```sql
 with stats as (
 select avg(price) as media_preco, stddev (price) as desvio_preco from winetable
@@ -120,9 +133,10 @@ select avg(price) as media_preco, stddev (price) as desvio_preco from winetable
 )
 select variety, country, province, winery, price, round(media_preco + 2*s.desvio_preco,2) as limite_superior,
 from winetable w cross join stats s
-where w.price > s.media_preco + 2*s.desvio_preco 
+where w.price > s.media_preco + 2*s.desvio_preco
 ```
-## 💡Interpretação dos resultados estatísticos: 
+**💻Resultado esperado do Output (Recorte):**
+**💡Insight:** 
 -Ao executar a query, o modelo calculou a média geral de preços em **$39,84** e um desvio padrão de **$42.84**.
 - O Limite Superior resultou em **$125.52**, o que indica que qualquer vinho acima desse valor é um outlier de preço alto.
 - O Limite Inferior resultou em um valor negativo **(- $45.85)**. Esse fenômeno ocorre devido à alta dispersão de preços no dataset.
@@ -132,6 +146,7 @@ where w.price > s.media_preco + 2*s.desvio_preco
 ## 📊Bloco 3: Modelagem Temporal e Crescimento de Negócio:
 
 ## Análise 3.7: Avaliação de Sazonalidade Mensal com função de Lag:
+**🎯Objetivo:**
 ```sql
 with faturamento_mensal as
 (select to_char(date_trunc('month', v.data_venda),'mm-yyyy') as mes, sum(v.quantidade * w.price) as faturamento
@@ -143,7 +158,11 @@ round((faturamento - lag(faturamento) over (order by mes))/lag(faturamento) over
 from faturamento_mensal
 order by mes
 ```
+**💻Resultado esperado do Output (Recorte):**
+**💡Insight:** 
+
 ## Análise 3.8: Score de Performance Geral de Vendas:
+**🎯Objetivo:**
 ```sql
 with performance as (
 select w.id_table, w.winery,sum(v.quantidade)::NUMERIC as volume, sum(v.quantidade * w.price)::NUMERIC as faturamento,
@@ -156,6 +175,9 @@ round(((volume/max(volume) over())*0.4 +
 + (frequencia/max(frequencia) over()) * 0.2)::NUMERIC, 4) as score
 from performance
 order by score desc
+```
+**💻Resultado esperado do Output (Recorte):**
+**💡Insight:** 
 
 
 
