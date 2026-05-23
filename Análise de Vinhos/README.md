@@ -45,21 +45,23 @@ with (Format csv, HEADER true, Encoding 'UTF8')
 
 ## 3. Consultas analíticas (SQL) e Insights de Negócio:
 
-Abaixo estão 8 análises estratégicas desenvolvidas para responder às dores do negócio, divididas por blocos de inteligência comercial.
+Abaixo estão 5 análises estratégicas desenvolvidas para responder às dores do negócio, divididas por blocos de inteligência comercial.
 
 ## 📊Bloco 1: Modelagem Temporal & Crescimento de Negócio:
 
-## Análise 3.1: Avaliação de Sazonalidade Mensal com função de Lag: :
-**🎯Objetivo:** 
+## Análise 1.1: Avaliação de Sazonalidade Mensal e Performance MoM:
+**🎯Objetivo:** Analisar a evolução histórica do faturamento global mês a mês, identificando os períodos de pico e vale na receita, além de calcular a variação percentual em relação ao mês anterior(MoM). 
 ```sql
 with faturamento_mensal as (
 select date_trunc('month', v.data_venda) as mes_data,
 sum(v.quantidade * w.price) as faturamento
 from vendas3 v join winetable w
-on v.id_vinho = w.id_table group by mes_data)
+on v.id_vinho = w.id_table 
+where v.data_venda < '2026-04-01'
+group by mes_data)
 select to_char(mes_data, 'mm-yyyy') as mes,
 faturamento,
-lag(faturamento) over (order by mes_data) as mes_anterior,
+lag(faturamento) over (order by mes_data) as faturamento_mes_anterior,
 faturamento - lag(faturamento) over (order by mes_data) as variacao,
 round((faturamento - lag(faturamento) over (order by mes_data))/
 nullif (lag(faturamento) over (order by mes_data), 0)*100, 2) as var_percentual
@@ -67,11 +69,16 @@ from faturamento_mensal
 order by mes_data
 ```
 **💻Resultado esperado do Output (Recorte):**
+
+<img width="669" height="394" alt="image" src="https://github.com/user-attachments/assets/0ca12fe1-2d9b-41e5-8da5-07c70a59a92e" />
+
 **💡Insight:** 
+**- Patamar da Receita:** O faturamento se estabiliza acima de **2,2 milhões entre maio e janeiro, tendo seu maior salto inicial em maio (+55.27%). 
+**- Ponto de atenção:** Fevereiro apresenta a maior retração da série (-8.75%), sinalizando o momento ideal para o time comercial planejar queimas de estoque e ações promocionais de trade marketing.
 
 ## 📊Bloco 2: Inteligência de Mercado & Posicionamento de Portifólio:
 
-## Análise 3.2: Top Variedades Líderes de Faturamento por País:
+## Análise 2.1: Top Variedades Líderes de Faturamento por País:
 **🎯Objetivo:** 
 ```sql
 with ranking_pais as (
@@ -91,46 +98,56 @@ order by pais asc, faturamento_total desc
 **💻Resultado esperado do Output (Recorte):**
 **💡Insight:** 
 
-## Análise 3.3: Score de Performance Geral de Vendas:
+## Análise 2.2: Score de Performance de Vendas por Vinícola:
 **🎯Objetivo:** 
 ```sql
-with performance as (
-select w.id_table, w.winery,sum(v.quantidade)::NUMERIC as volume, sum(v.quantidade * w.price)::NUMERIC as faturamento,
-count (v.id_venda)::NUMERIC as frequencia
+with performance_vinicola as (
+select w.winery as vinicola, w.country as pais, w.province as provincia, 
+round(avg(w.price), 2) as preco_medio,
+round(avg(w.points::NUMERIC), 1) as nota_tecnica_media,
+sum(v.quantidade)::NUMERIC as volume_vendas, 
+sum(v.quantidade * w.price)::NUMERIC as faturamento_total,
+count (v.id_venda)::NUMERIC as frequencia_compra
 from vendas3 v join winetable w on v.id_vinho = w.id_table
-group by w.id_table, w.winery)
-select id_table, winery, volume, faturamento, frequencia, 
-round(((volume/max(volume) over())*0.4 + 
-(faturamento/max(faturamento)over()) * 0.4
-+ (frequencia/max(frequencia) over()) * 0.2)::NUMERIC, 4) as score
-from performance
-order by score desc
+group by w.winery, w.country, w.province
+)
+select vinicola, pais, provincia, preco_medio, nota_tecnica_media, 
+round(((volume_vendas/max(volume_vendas) over())*0.4 + 
+(faturamento_total/max(faturamento_total)over()) * 0.4
++ (frequencia_compra/max(frequencia_compra) over()) * 0.2), 4) as score_performance
+from performance_vinicola
+order by score_performance desc
 ```
 **💻Resultado esperado do Output (Recorte):**
 **💡Insight:** 
 
 ## 📊Bloco 3: Governança de Pricing & Eficiência Operacional::
 
-## Análise 3.4: Classificação ABC por Faturamento:
+## Análise 3.1: Curva ABC por País (Classificação por Relevância de Faturamento):
 **🎯Objetivo:**.
 ```sql
-with faturamento as (
-select w.id_table, w.winery,sum(v.quantidade*w.price) as receita
+with faturamento_pais as (
+select w.country as pais, sum(v.quantidade*w.price) as receita
 from vendas3 v join winetable w 
-on v.id_vinho = w.id_table 
-group by w.id_table, w.winery),
-ranking as (
-select *, sum(receita) over(order by receita desc) as receita_acumulada,
-sum(receita) over () as receita_total from faturamento)
-select id_table, winery, receita, 
-round(receita_acumulada/receita_total*100,2) as percentual_acumulado
-from ranking
+on v.id_vinho = w.id_table
+where w.country is not null
+group by w.country),
+ranking_acumulado as (
+select pais, receita, sum(receita) over(order by receita desc) as receita_acumulada,
+sum(receita) over () as receita_total from faturamento_pais)
+select pais, receita, 
+round((receita_acumulada/receita_total)*100,2) as percentual_acumulado,
+case when (receita_acumulada/receita_total) <= 0.80 then 'A (Altamente Crítico - 80% da Receita)'
+     when (receita_acumulada/receita_total) <= 0.95 then 'B (Intermediário - 15% da Receita)'
+	 else  'C (Baixo Impacto - 5% da Receita)'
+	 end as classe_ABC
+	 from ranking_acumulado
 order by receita desc
 ```
 **💻Resultado esperado do Output (Recorte):**
 **💡Insight:** 
 
-## Análise 3.5: Detecção de Outliers de Preço por Categoria:
+## Análise 3.2: Detecção de Outliers de Preço por Categoria:
 **🎯Objetivo:**
 ```sql
 with estatistica_pais as (
