@@ -50,6 +50,7 @@ Abaixo estão 5 análises estratégicas desenvolvidas para responder às dores d
 ## 📊Bloco 1: Modelagem Temporal & Crescimento de Negócio:
 
 ## Análise 1.1: Avaliação de Sazonalidade Mensal e Performance MoM:
+
 **🎯Objetivo:** Analisar a evolução histórica do faturamento global mês a mês, identificando os períodos de pico e vale na receita, além de calcular a variação percentual em relação ao mês anterior(MoM). 
 ```sql
 with faturamento_mensal as (
@@ -73,7 +74,9 @@ order by mes_data
 <img width="669" height="394" alt="image" src="https://github.com/user-attachments/assets/0ca12fe1-2d9b-41e5-8da5-07c70a59a92e" />
 
 **💡Insight:** 
+
 **- Patamar da Receita:** O faturamento se estabiliza acima de **2,2 milhões entre maio e janeiro, tendo seu maior salto inicial em maio (+55.27%). 
+
 **- Ponto de atenção:** Fevereiro apresenta a maior retração da série (-8.75%), sinalizando o momento ideal para o time comercial planejar queimas de estoque e ações promocionais de trade marketing.
 
 ## 📊Bloco 2: Inteligência de Mercado & Posicionamento de Portifólio:
