@@ -47,126 +47,52 @@ with (Format csv, HEADER true, Encoding 'UTF8')
 
 Abaixo estão 8 análises estratégicas desenvolvidas para responder às dores do negócio, divididas por blocos de inteligência comercial.
 
-## 📊Bloco 1: Performance de Produto e Mix de Vendas (Sortimento)
+## 📊Bloco 1: Modelagem Temporal & Crescimento de Negócio:
 
-## Análise 3.1: Classificação da curva ABC por faturamento:
-**🎯Objetivo:** Aplicar o princípio de Pareto para identificar quais vinhos concentram 80% do faturamento total. Essa informação é vital para blindar os principais geradores de receita e otimizar a cadeia de suprimentos.
+## Análise 3.1: Avaliação de Sazonalidade Mensal com função de Lag: :
+**🎯Objetivo:** 
 ```sql
---with faturamento as (
-select w.id_table, w.winery,sum(v.quantidade*w.price) as receita
-from vendas3 v join winetable w on v.id_vinho = w.id_table group by w.id_table, w.winery),
-ranking as (select *, sum(receita) over(order by receita desc) as receita_acumulada,
-sum(receita) over () as receita_total from faturamento)
-select id_table, winery, receita, 
-round(receita_acumulada/receita_total*100,2) as percentual_acumulado
-from ranking
-order by receita desc
-```
-**💻Resultado esperado do Output (Recorte):**
-**💡Insight:** 
-
-## Análise 3.2: Identificação de Variedades mais Lucrativas:
-**🎯Objetivo:** Avaliar os 10 tipos de uvas (variedades) que trazem o maior retorno financeiro, cruzando o faturamento total com o volume absoluto de vendas. Essa visão permite focar o orçamento de marketing nas variedades que movem o ponteiro da receita, potencializa a gestão de parcerias estratégicas e evita o estoque de baixo giro. 
-```sql
-select w.variety, sum(v.quantidade * w.price) as faturamento, sum(v.quantidade) as volume
-from vendas3 v join winetable w on v.id_vinho = w.id_table
-group by w.variety
-order by faturamento desc
-limit 10
-```
-**💻Resultado esperado do Output (Recorte):**
-**💡Insight:** 
-
-## Análise 3.3: Vinhos nunca vendidos (Análise de Churn de Estoque)
-**🎯Objetivo:** Identificar quais produtos nunca tiveram saída, o que permite que o time comercial monte kits, atue em promoções ou mude a estratégia de distribuição geográfica desses rótulos.
-```sql
-select w.id_table, w.winery, w.variety, w.price
-from winetable w left join vendas3 v on v.id_vinho = w.id_table
-where v.id_vinho is null
-```
-**💻Resultado esperado do Output (Recorte):**
-**💡Insight:** 
-
-## 📊Bloco 2: Elasticidade de Preço e Inteligência Geográfica:
-
-## Análise 3.4: Análise de Preços vs Volume de Vendas:
-**🎯Objetivo:** A segmentação de portifólio ajuda a entender a elasticidade dos preços. Isso responde a uma pergunta crucial de mercado: o faturamento é sustentado pelo volume de produtos de entrada ou pela margem de produtos de alto padrão?
-```sql
-select case when w.price < 50 then 'Barato'
-            when w.price between 50 and 100 then 'Médio'
-            else 'Premium'
-end as  faixa_preco,
-sum(v.quantidade) as volume_vendido,
-round(avg(w.price),2) as ticket_medio
-from vendas3 v join winetable w on v.id_vinho = w.id_table
-group by faixa_preco
-order by ticket_medio
-```
-**💻Resultado esperado do Output (Recorte):**
-**💡Insight:** 
-
-## Análise 3.5: Ticket_Médio (TM) e Faturamento por País de Origem:
-**🎯Objetivo:**
-```sql
-select w.country, round(avg(price),2) as ticket_medio
-from vendas3 v join winetable w on v.id_vinho = w.id_table
-group by w.country
-order by ticket_medio desc
-```
-**💻Resultado esperado do Output (Recorte):**
-**💡Insight:** 
-
-## Análise 3.6: Detecção de Outliers de Preço por Categoria:
-**🎯Objetivo:** Identificar produtos com preços muito acima ou abaixo da média de mercado, utilizando o modelo estatístico de **Média +- 2 Devios Padrão** para isolar distorções e encontrar itens de categorias Premium.
-```sql
-with stats as (
-select avg(price) as media_preco, stddev (price) as desvio_preco from winetable
-)
-select variety, country, province, winery, price, round(media_preco,2), round(desvio_preco,2)
-from winetable w cross join stats s
-where w.price > s.media_preco + 2*s.desvio_preco
-or w.price < s.media_preco - 2*s.desvio_preco
-
---query ajustada, uma vez que rodando a query acima detectamos que o limite inferior resultou em valor negativo--
-with stats as (
-select avg(price) as media_preco, stddev (price) as desvio_preco from winetable
-)
-select variety, country, province, winery, price, round(media_preco + 2*s.desvio_preco,2) as limite_superior,
-from winetable w cross join stats s
-where w.price > s.media_preco + 2*s.desvio_preco
-```
-**💻Resultado esperado do Output (Recorte):**
-**💡Insight:** 
--Ao executar a query, o modelo calculou a média geral de preços em **$39,84** e um desvio padrão de **$42.84**.
-- O Limite Superior resultou em **$125.52**, o que indica que qualquer vinho acima desse valor é um outlier de preço alto.
-- O Limite Inferior resultou em um valor negativo **(- $45.85)**. Esse fenômeno ocorre devido à alta dispersão de preços no dataset.
-- No mercado real, não existem preços negativos, portanto a análise conclui que não há outliers inferiores nesse portifólio e valida que não há distorções causadas por produtos baratos demais.
-- Por outro lado,  o teto de **$125.52** isola com precisão os vinhos Premium ou de Colecionador, o que permite a criação de uma categoria de produtos exclusivos separada do portifólio regular.
-
-## 📊Bloco 3: Modelagem Temporal e Crescimento de Negócio:
-
-## Análise 3.7: Avaliação de Sazonalidade Mensal com função de Lag:
-**🎯Objetivo:**
-```sql
-with faturamento_mensal as
-date_trunc('month', v.data_venda) as mes_venda,
+with faturamento_mensal as (
+select date_trunc('month', v.data_venda) as mes_data,
 sum(v.quantidade * w.price) as faturamento
 from vendas3 v join winetable w
-on v.id_vinho = w.id_table group by mes)
-select to_char(mes_venda, 'mm-yyyy') as mes,
+on v.id_vinho = w.id_table group by mes_data)
+select to_char(mes_data, 'mm-yyyy') as mes,
 faturamento,
-lag(faturamento) over (order by mes_venda) as mes_anterior,
+lag(faturamento) over (order by mes_data) as mes_anterior,
 faturamento - lag(faturamento) over (order by mes_data) as variacao,
-round((faturamento - lag(faturamento) over (order by mes_venda))/
-nullif (lag(faturamento) over (order by mes_venda), 0)*100, 2) as var_percentual
+round((faturamento - lag(faturamento) over (order by mes_data))/
+nullif (lag(faturamento) over (order by mes_data), 0)*100, 2) as var_percentual
 from faturamento_mensal
-order by mes_venda
+order by mes_data
 ```
 **💻Resultado esperado do Output (Recorte):**
 **💡Insight:** 
 
-## Análise 3.8: Score de Performance Geral de Vendas:
-**🎯Objetivo:**
+## 📊Bloco 2: Inteligência de Mercado & Posicionamento de Portifólio:
+
+## Análise 3.2: Top Variedades Líderes de Faturamento por País:
+**🎯Objetivo:** 
+```sql
+with ranking_pais as (
+select w.country as pais, w.variety as variedade_uva, 
+round(sum(v.quantidade * coalesce(w.price, 0)),2) as faturamento_total,
+dense_rank() over (partition by w.country order by sum(v.quantidade * coalesce(w.price,0)) desc) 
+as posicao_ranking
+from vendas3 v inner join winetable w 
+on v.id_vinho = w.id_table
+group by w.country, w.variety
+)
+select pais, variedade_uva, faturamento_total, posicao_ranking
+from ranking_pais
+where posicao_ranking <=3
+order by pais asc, faturamento_total desc
+```
+**💻Resultado esperado do Output (Recorte):**
+**💡Insight:** 
+
+## Análise 3.3: Score de Performance Geral de Vendas:
+**🎯Objetivo:** 
 ```sql
 with performance as (
 select w.id_table, w.winery,sum(v.quantidade)::NUMERIC as volume, sum(v.quantidade * w.price)::NUMERIC as faturamento,
@@ -179,6 +105,51 @@ round(((volume/max(volume) over())*0.4 +
 + (frequencia/max(frequencia) over()) * 0.2)::NUMERIC, 4) as score
 from performance
 order by score desc
+```
+**💻Resultado esperado do Output (Recorte):**
+**💡Insight:** 
+
+## 📊Bloco 3: Governança de Pricing & Eficiência Operacional::
+
+## Análise 3.4: Classificação ABC por Faturamento:
+**🎯Objetivo:**.
+```sql
+with faturamento as (
+select w.id_table, w.winery,sum(v.quantidade*w.price) as receita
+from vendas3 v join winetable w 
+on v.id_vinho = w.id_table 
+group by w.id_table, w.winery),
+ranking as (
+select *, sum(receita) over(order by receita desc) as receita_acumulada,
+sum(receita) over () as receita_total from faturamento)
+select id_table, winery, receita, 
+round(receita_acumulada/receita_total*100,2) as percentual_acumulado
+from ranking
+order by receita desc
+```
+**💻Resultado esperado do Output (Recorte):**
+**💡Insight:** 
+
+## Análise 3.5: Detecção de Outliers de Preço por Categoria:
+**🎯Objetivo:**
+```sql
+with estatistica_pais as (
+select w.country as pais, avg(price) as media_preco, stddev(price) as  desvio_preco
+from winetable w 
+group by country
+having count(*)> 1
+)
+select  w.country as pais, count (case when w.price > (s.media_preco + (2*s.desvio_preco))
+then 1 end) as qtd_outliers_caros, 
+count (case when w.price < (s.media_preco - (2*s.desvio_preco)) then 1 end) as qtd_outliers_baratos,
+count (case when w.price >= (s.media_preco - (2*s.desvio_preco)) and
+w.price <= (s.media_preco + (2*s.desvio_preco))  then 1 end) as qtd_vinhos_padrao,
+count (*) as total_vinho_pais
+from winetable w join estatistica_pais s 
+on w.country = s.pais
+where price is not null
+group by w.country
+order by total_vinho_pais desc
 ```
 **💻Resultado esperado do Output (Recorte):**
 **💡Insight:** 
