@@ -124,14 +124,15 @@ order by receita desc
 **🎯Objetivo:** Identificar e rankear as principais variedades de uvas líderes em faturamento dentro de cada país produtor, utilizando funções de janela (DENSE_RANK). Permite mapear o core business de cada país, servindo como guia estratégico para entender as forças comerciais de cada região. 
 ```sql
 with ranking_pais as (
-select w.country as pais, w.variety as variedade_uva, 
+select w.country as pais, w.variety as variedade_uva,
+--o COALESCE garante o tratamento de valores nulos.
 round(sum(v.quantidade * coalesce(w.price, 0)),2) as faturamento_total,
 -- Windows Function: ranqueia as uvas por faturamento dentro de cada país.
 -- O PARTITION BY garante que o ranking reinicie a cada novo país.
 -- O DENSE_RANK evita saltos na numeração em casos de empate.
 dense_rank() over (partition by w.country order by sum(v.quantidade * coalesce(w.price,0)) desc) 
 as posicao_ranking
-from vendas3 v inner join winetable w 
+from vendas3 v join winetable w 
 on v.id_vinho = w.id_table
 group by w.country, w.variety
 )
