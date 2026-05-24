@@ -5,109 +5,104 @@
 --Scripts das Consultas Analíticas--
 =================================================================================================================================================
 
---Bloco 1: PERFORMANCE DE PRODUTO E MIX DE VENDAS:
+--Bloco 1: MODELAGEM TEMPORAL E CRESCIMENTO DE NEGÓCIO:
 -------------------------------------------------------------------------------------------------------------------------------------------------
---Análise 3.1: Classificação de Curva ABC por Faturamento:
-
-with faturamento as (
-select w.id_table, w.winery,sum(v.quantidade*w.price) as receita
-from vendas3 v join winetable w 
+-- Análise 1.1: Avaliação de Sazonalidade Mensal e Performance MoM:  
+with faturamento_mensal as (
+select date_trunc('month', v.data_venda) as mes_data,
+sum(v.quantidade * w.price) as faturamento
+from vendas3 v join winetable w
 on v.id_vinho = w.id_table 
-group by w.id_table, w.winery),
-ranking as (
-select *, sum(receita) over(order by receita desc) as receita_acumulada,
-sum(receita) over () as receita_total from faturamento)
-select id_table, winery, receita, 
-round(receita_acumulada/receita_total*100,2) as percentual_acumulado
-from ranking
+where v.data_venda < '2026-04-01'
+group by mes_data)
+select to_char(mes_data, 'mm-yyyy') as mes,
+faturamento,
+lag(faturamento) over (order by mes_data) as faturamento_mes_anterior,
+faturamento - lag(faturamento) over (order by mes_data) as variacao,
+round((faturamento - lag(faturamento) over (order by mes_data))/
+nullif (lag(faturamento) over (order by mes_data), 0)*100, 2) as var_percentual
+from faturamento_mensal
+order by mes_data
+
+------------------------------------------------------------------------------------------------------------------------------------------------
+--Bloco 2: Inteligência de Mercado & Posicionamento de Portifólio:
+------------------------------------------------------------------------------------------------------------------------------------------------
+
+--Análise 2.1: Top Variedades Líderes de Faturamento por País:
+
+with ranking_pais as (
+select w.country as pais, w.variety as variedade_uva, 
+round(sum(v.quantidade * coalesce(w.price, 0)),2) as faturamento_total,
+dense_rank() over (partition by w.country order by sum(v.quantidade * coalesce(w.price,0)) desc) 
+as posicao_ranking
+from vendas3 v inner join winetable w 
+on v.id_vinho = w.id_table
+group by w.country, w.variety
+)
+select pais, variedade_uva, faturamento_total, posicao_ranking
+from ranking_pais
+where posicao_ranking <=3
+order by pais asc, faturamento_total desc
+
+--Análise 2.2: Score de Performance de Vendas por Vinícola:
+
+with performance_vinicola as (
+select w.winery as vinicola, w.country as pais, w.province as provincia, 
+round(avg(w.price), 2) as preco_medio,
+round(avg(w.points::NUMERIC), 1) as nota_tecnica_media,
+sum(v.quantidade)::NUMERIC as volume_vendas, 
+sum(v.quantidade * w.price)::NUMERIC as faturamento_total,
+count (v.id_venda)::NUMERIC as frequencia_compra
+from vendas3 v join winetable w on v.id_vinho = w.id_table
+group by w.winery, w.country, w.province)
+select vinicola, pais, provincia, preco_medio, nota_tecnica_media, 
+round(((volume_vendas/max(volume_vendas) over())*0.4 + 
+(faturamento_total/max(faturamento_total)over()) * 0.4
++ (frequencia_compra/max(frequencia_compra) over()) * 0.2), 4) as score_performance
+from performance_vinicola
+order by score_performance desc
+
+------------------------------------------------------------------------------------------------------------------------------------------------
+--Bloco 3: Governança de Pricing & Eficiência Operacional:
+------------------------------------------------------------------------------------------------------------------------------------------------
+
+--Análise 3.1: Curva ABC por País (Classificação por Relevância de Faturamento):
+
+with faturamento_pais as (
+select w.country as pais, sum(v.quantidade*w.price) as receita
+from vendas3 v join winetable w 
+on v.id_vinho = w.id_table
+where w.country is not null
+group by w.country),
+ranking_acumulado as (
+select pais, receita, sum(receita) over(order by receita desc) as receita_acumulada,
+sum(receita) over () as receita_total from faturamento_pais)
+select pais, receita, 
+round((receita_acumulada/receita_total)*100,2) as percentual_acumulado,
+case when (receita_acumulada/receita_total) <= 0.80 then 'A (Altamente Crítico - 80% da Receita)'
+     when (receita_acumulada/receita_total) <= 0.95 then 'B (Intermediário - 15% da Receita)'
+	 else  'C (Baixo Impacto - 5% da Receita)'
+	 end as classe_ABC
+	 from ranking_acumulado
 order by receita desc
 
---Análise 3.2: Identificação das Variedades mais Lucrativas:
+--Análise 3.2: Detecção de Outliers de Preço por País (Volumetria de Dispersão):
 
-select w.variety, sum(v.quantidade * w.price) as faturamento, sum(v.quantidade) as volume
-from vendas3 v join winetable w 
-on v.id_vinho = w.id_table
-group by w.variety
-order by faturamento desc
-limit 10
-
---Análise 3.3: Vinhos nunca Vendidos:
-
-select w.id_table, w.winery, w.variety, w.price 
-from winetable w left join vendas3 v 
-on v.id_vinho = w.id_table
-where v.id_vinho is null
-------------------------------------------------------------------------------------------------------------------------------------------------
---Bloco 2: Elastidade de Preço e Inteligência Geográfica:
-------------------------------------------------------------------------------------------------------------------------------------------------
---Análise 3.4: Análise de Preços vs Volume de Vendas:
-
-select case when w.price < 50 then 'Barato'
-            when w.price between 50 and 100 then 'Médio'
-            else 'Premium'
-end as  faixa_preco,
-sum(v.quantidade) as volume_vendido,
-round(avg(w.price),2) as ticket_medio
-from vendas3 v join winetable w 
-on v.id_vinho = w.id_table
-group by faixa_preco
-order by ticket_medio
-
---Análise 3.5: Ticket_Médio (TM) e Faturamento por País de Origem:
-
-select w.country, round(avg(price),2) as ticket_medio
-from vendas3 v join winetable w 
-on v.id_vinho = w.id_table
-group by w.country 
-order by ticket_medio desc
-
---Análise 3.6: Detecção de Outliers de Preço por Categoria:
-
-with stats as (
-select avg(price) as media_preco, stddev (price) as desvio_preco from winetable
+with estatistica_pais as (
+select w.country as pais, avg(price) as media_preco, stddev(price) as  desvio_preco
+from winetable w 
+group by country
+having count(*)> 1
 )
-select variety, country, province, winery, price, round(media_preco + 2*s.desvio_preco,2) as limite_superior,
-round(media_preco - 2*s.desvio_preco,2) as limite_inferior
-from winetable w cross join stats s
-where w.price > s.media_preco + 2*s.desvio_preco 
-or w.price < s.media_preco - 2*s.desvio_preco 
+select  w.country as pais, count (case when w.price > (s.media_preco + (2*s.desvio_preco))
+then 1 end) as qtd_outliers_caros, 
+count (case when w.price < (s.media_preco - (2*s.desvio_preco)) then 1 end) as qtd_outliers_baratos,
+count (case when w.price >= (s.media_preco - (2*s.desvio_preco)) and
+w.price <= (s.media_preco + (2*s.desvio_preco))  then 1 end) as qtd_vinhos_padrao,
+count (*) as total_vinho_pais
+from winetable w join estatistica_pais s 
+on w.country = s.pais
+where price is not null
+group by w.country
+order by total_vinho_pais desc
 
---query ajustada, uma vez que rodando a query acima detectamos que o limite inferior resultou em valor negativo--
-with stats as (
-select avg(price) as media_preco, stddev (price) as desvio_preco from winetable
-)
-select variety, country, province, winery, price, round(media_preco + 2*s.desvio_preco,2) as limite_superior,
-from winetable w cross join stats s
-where w.price > s.media_preco + 2*s.desvio_preco 
-
-------------------------------------------------------------------------------------------------------------------------------------------------
---Bloco 3: Modelagem Temporal e Crescimento de Negócio:
-------------------------------------------------------------------------------------------------------------------------------------------------
-
---Análise 3.7: Avaliação de Sazonalidade Mensal com função de Lag:
-
-with faturamento_mensal as
-(select to_char(date_trunc('month', v.data_venda),'mm-yyyy') as mes, sum(v.quantidade * w.price) as faturamento
-from vendas3 v join winetable w
-on v.id_vinho = w.id_table group by mes)
-select mes, faturamento, lag(faturamento) over (order by mes) as mes_anterior,
-faturamento - lag(faturamento) over (order by mes) as variacao,
-round((faturamento - lag(faturamento) over (order by mes))/lag(faturamento) over (order by mes),2) as var_prc
-from faturamento_mensal
-order by mes
-
---Análise 3.8: Score de Performance Geral de Vendas:
-
-with performance as (
-select w.id_table, w.winery,sum(v.quantidade)::NUMERIC as volume, sum(v.quantidade * w.price)::NUMERIC as faturamento,
-count (v.id_venda)::NUMERIC as frequencia
-from vendas3 v join winetable w on v.id_vinho = w.id_table
-group by w.id_table, w.winery)
-select id_table, winery, volume, faturamento, frequencia, 
-round(((volume/max(volume) over())*0.4 + 
-(faturamento/max(faturamento)over()) * 0.4
-+ (frequencia/max(frequencia) over()) * 0.2)::NUMERIC, 4) as score
-from performance
-order by score desc
-
----------------------------------------------------------------------------------------------------------------------------------------------
