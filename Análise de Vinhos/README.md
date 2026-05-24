@@ -75,14 +75,15 @@ order by mes_data
 
 **💡Insight:** 
 
-**- Patamar da Receita:** O faturamento se estabiliza acima de **2,2 milhões entre maio e janeiro, tendo seu maior salto inicial em maio (+55.27%). 
+**- Estabilidade da Receita:** O faturamento se estabiliza acima de **$2,2 milhões entre maio e janeiro, tendo seu maior salto inicial em maio (+55.27%). 
 
-**- Ponto de atenção:** Fevereiro apresenta a maior retração da série (-8.75%), sinalizando o momento ideal para o time comercial planejar queimas de estoque e ações promocionais de trade marketing.
+**- Ponto de atenção:** Fevereiro apresenta a maior retração da série (-8.75%), apontando para uma desaceleração sazonal global  de consumo, o que permite que importadores gerenciem seus fluxos de compras e estoque de forma estratégica.
 
 ## 📊Bloco 2: Inteligência de Mercado & Posicionamento de Portifólio:
 
 ## Análise 2.1: Top Variedades Líderes de Faturamento por País:
-**🎯Objetivo:** 
+
+**🎯Objetivo:** Identificar e rankear as principais variedades de uvas líderes em faturamento dentro de cada país produtor, utilizando funções de janela (DENSE_RANK). Permite mapear o core business de cada país, servindo como guia estratégico para entender as forças comerciais de cada região. 
 ```sql
 with ranking_pais as (
 select w.country as pais, w.variety as variedade_uva, 
@@ -99,10 +100,22 @@ where posicao_ranking <=3
 order by pais asc, faturamento_total desc
 ```
 **💻Resultado esperado do Output (Recorte):**
+
+<img width="672" height="221" alt="image" src="https://github.com/user-attachments/assets/a10ec893-326a-4f78-9e66-8bc94ee5fd6a" />
+
+(Output resumido para fins de demonstração executiva do funcionamento da partição por país).
+
 **💡Insight:** 
 
+**- Assimetria de Mercado:** O Chile demonstra uma tração comercial infinitamente superior à do Canadá em termos de volume de receita, liderado pelo Red Blend (88,4 mil), destacando-se como mercado de alto volume e relevância para o comércio internacional de vinhos.
+
+**- Mapeamento de Preferências:** Enquanto o Canadá se posiciona fortemente com vinhos brancos aromáticos (Riesling e Chardonnay nas primeiras posições), o Chile tem sua força  concentrada em vinhos encorpados (Red Blend, Cabernet e Carmenère).
+
+**- Estratégia de Precificação:** Saber a variedade de uva líder em cada país direciona as estratégias de negociação por ganho de escala.
+
 ## Análise 2.2: Score de Performance de Vendas por Vinícola:
-**🎯Objetivo:** 
+
+**🎯Objetivo:** Avaliar a tração comercial das marcas produtoras do mercado global por meio de um indicador composto ponderado (40% volume, 40% faturamento e 20% frequência de compra) normalizado pelo valor máximo. O objetivo é cruzar o score de desempenho com o preço médio e nota técnica de cada vinho, para identificar marcas estratégicas e distorções de valor.
 ```sql
 with performance_vinicola as (
 select w.winery as vinicola, w.country as pais, w.province as provincia, 
@@ -122,12 +135,24 @@ from performance_vinicola
 order by score_performance desc
 ```
 **💻Resultado esperado do Output (Recorte):**
+
+<img width="1073" height="196" alt="image" src="https://github.com/user-attachments/assets/5e8ecbf9-dd7b-44d8-8ab5-12e94a6bdfb1" />
+
+(Output resumido com as 5 principais vinícolas do ranking geral para fins de análise).
+
 **💡Insight:** 
+
+**- Destaque de Alto Valor Agregado:** A francesa Louis Latour lidera o mercado global com um score de **0.9140**, impulsionada por um forte faturamento  gerado pelo alto preço médio ($123.58), consolidando-se como uma marca de alta relevância financeira e posicionamento premium.
+
+**- Oportunidade de Custo-Benefício:** A americana Williams Selyem ocupa a segunda posição com score **0.9268**, apresentando a maior nota técnica do topo do ranking (92.8), mas com preço médio aproximadamente 50% menor que o da líder ($60.01). Isso indica um produto de alta qualidade com preço competitivo e forte tração de mercado.
+
+**- Eficiência e Volume:** A vinícola Chateau Ste.Michelle consegue se posicionar no Top 5 mesmo com um preço médio baixo ($23.12), o que comprova que o score é sustentado por um alto volume de vendas e frequência no mercado.
 
 ## 📊Bloco 3: Governança de Pricing & Eficiência Operacional::
 
 ## Análise 3.1: Curva ABC por País (Classificação por Relevância de Faturamento):
-**🎯Objetivo:**.
+
+**🎯Objetivo:** Aplicar o princípio de Pareto (regra dos 80/20) para categorizar os países produtores de vinho em classes (A, B e C) com base na receita acumulada. Esta análise macroeconômica visa identificar os mercados de maior relevância financeira global.
 ```sql
 with faturamento_pais as (
 select w.country as pais, sum(v.quantidade*w.price) as receita
@@ -148,10 +173,22 @@ case when (receita_acumulada/receita_total) <= 0.80 then 'A (Altamente Crítico 
 order by receita desc
 ```
 **💻Resultado esperado do Output (Recorte):**
+
+<img width="741" height="190" alt="image" src="https://github.com/user-attachments/assets/0aca8739-f8d7-4c50-a424-1e35a191dbd7" />
+
+(Output resumido com as 5 primeiras linhas para demonstrar o ponto de virada analítica entre as classes A e B. O resultado total abrange 43 países produtores).
+
 **💡Insight:** 
 
-## Análise 3.2: Detecção de Outliers de Preço por Categoria:
-**🎯Objetivo:**
+**- Hiperconcentração de Mercado (Classe A):** Apenas 3 países (Estados Unidos, França e Itála) detém praticamente 80% do faturamento mundial de vinhos do dataset, o que revela onde está o core financeiro.
+
+**- Ponto de Inflexão (Transição para a Classe B):** Portugal e Espanha abrem a classe B com receitas individuais na casa de 1 milhão. Embora tenham reputação de qualidade, operam em uma escala financeira bem menor do que os países da Classe A.
+
+**- Visão de Mitigação de Risco:** Para grandes players de logística e distribuição, focar o planejamento em mercados da Classe A garante estabilidade de receita, enquanto os países das classes B e C servem para diversificar o portifólio.
+
+## Análise 3.2: Detecção de Outliers de Preço por País (Volumetria de Dispersão):
+
+**🎯Objetivo:** Quantificar volumetricamente a distribuição de rótulos que operam fora das faixas normais de preço (limites de +- 2 desvios padrões) agrupados por país produtor e mapear quais mercados globais concentram o maior volume de produtos de exceção, servindo como um diagnóstico macro da dispersão de preços em cada região.
 ```sql
 with estatistica_pais as (
 select w.country as pais, avg(price) as media_preco, stddev(price) as  desvio_preco
@@ -172,7 +209,18 @@ group by w.country
 order by total_vinho_pais desc
 ```
 **💻Resultado esperado do Output (Recorte):**
+
+<img width="804" height="219" alt="image" src="https://github.com/user-attachments/assets/5f4b38fa-99c3-4671-ac18-11c90bf6af2f" />
+
+(Output resumido com os 6 países com maior volume de dados para demonstrar a eficiência do modelo estatístico de dispersão. O resultado total engloba 40 países auditados.
+
 **💡Insight:** 
+
+**- Assimetria de Preços:** A presença constante de 0 outliers baratos em todas as praças comprova que o mercado global possui uma barreira natural de preço mínimo. Em contrapartida, o volume de outliers caros reflete a forte presença de rótulos premium e safras exclusivas de colecionadores.
+
+**- Comportamento de Mercado (EUA vs Europa):** Embora a França e Itália tenham volumes similares de vinhos no padrão (casa de 20 mil), o mercado americano (US) se destaca com 1.825 vinhos considerados como outliers caros. Isso indica que os EUA operam em uma dinâmica de mercado com dispersão muito mais agressiva para o segmento super premium.
+
+**- Direcionamento de Auditoria Detalhada:** Essa visão macro funciona como um dashboard de controle. Ao perceber que uma região apresenta quantidade anormal de outliers, o analista ganha direcionamento estratégico de qual país precisa sofrer um drill-down em uma análise subsequente.
 
 
 
