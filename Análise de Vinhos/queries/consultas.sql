@@ -59,6 +59,7 @@ order by receita desc
 
 with ranking_pais as (
 select w.country as pais, w.variety as variedade_uva, 
+--o COALESCE garante o tratamento de valores nulos.
 round(sum(v.quantidade * coalesce(w.price, 0)),2) as faturamento_total,
 -- Windows Function: ranqueia as uvas por faturamento dentro de cada país.
 -- O PARTITION BY garante que o ranking reinicie a cada novo país.
