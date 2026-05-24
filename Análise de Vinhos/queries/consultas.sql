@@ -66,7 +66,7 @@ round(sum(v.quantidade * coalesce(w.price, 0)),2) as faturamento_total,
 -- O DENSE_RANK evita saltos na numeração em casos de empate.
 dense_rank() over (partition by w.country order by sum(v.quantidade * coalesce(w.price,0)) desc) 
 as posicao_ranking
-from vendas3 v inner join winetable w 
+from vendas3 v join winetable w 
 on v.id_vinho = w.id_table
 group by w.country, w.variety
 )
