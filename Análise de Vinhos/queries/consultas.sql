@@ -7,6 +7,7 @@
 
 --Bloco 1: MODELAGEM TEMPORAL E CRESCIMENTO DE NEGÓCIO:
 -------------------------------------------------------------------------------------------------------------------------------------------------
+
 -- Análise 1.1: Avaliação de Sazonalidade Mensal e Performance MoM:  
  
 with faturamento_mensal as (
